@@ -14,7 +14,7 @@ Make sure you have Node.js and npm installed on your computer.
 npm install
 ```
 
-4. Create a `.env.local` file in the root directory of the project and add your API key:
+4. Modify `.env.local` and add your API key:
 
 ```env
 VITE_API_KEY=your_api_key_here
