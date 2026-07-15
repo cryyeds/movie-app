@@ -2,8 +2,12 @@ import React, { useState, useEffect } from 'react'
 import Search from './components/Search'
 import Spinner from './components/Spinner';
 import MovieCard from './components/MovieCard';
+import Login from './Login'; // 1. Import your new Login page
 
 const App = () => {
+// 2. Add a state to track if the user is logged in
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [movieList, setMovieList] = useState([]);
@@ -58,6 +62,10 @@ const App = () => {
     }
   }, [])
   
+  
+  if (!isLoggedIn) {
+    return <Login onLoginSuccess={() => setIsLoggedIn(true)} />;
+  }
 
   return (
     <main>
