@@ -1,13 +1,7 @@
-import React, { useState, useEffect } from 'react'
-import Search from './components/Search'
-import Spinner from './components/Spinner';
+import React, { useState, useEffect } from 'react';
 import MovieCard from './components/MovieCard';
-import Login from './Login'; // 1. Import your new Login page
 
 const App = () => {
-// 2. Add a state to track if the user is logged in
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
   const [searchTerm, setSearchTerm] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [movieList, setMovieList] = useState([]);
@@ -62,45 +56,96 @@ const App = () => {
     }
   }, [])
   
-  
-  if (!isLoggedIn) {
-    return <Login onLoginSuccess={() => setIsLoggedIn(true)} />;
-  }
 
-  return (
-    <main>
-      <div className='pattern'>
-        <div className='wrapper'>
-          <header>
-            <img src='./hero-img.png' alt='Hero Banner' />
-            <h1>
-              Looking for <span className='text-gradient'>a movie?</span> Not anymore!
-            </h1>
-          </header>
+    return (
+        <div className="App">
+            <h1>Movie App</h1>
+            <div className="search-filter-container">
+                <Search searchTerm={searchTerm} onSearchChange={handleSearch} />
+                <div className="filter-dropdown">
+                    <label htmlFor="genre-filter">Filter by Genre: </label>
+                    <select id="genre-filter" value={filter} onChange={handleFilterChange}>
+                        <option value="">All Genres</option>
+                        {/* Genre options would ideally come from an API or a predefined list */}
+                        <option value="28">Action</option>
+                        <option value="12">Adventure</option>
+                        <option value="16">Animation</option>
+                        <option value="35">Comedy</option>
+                        <option value="80">Crime</option>
+                        <option value="99">Documentary</option>
+                        <option value="18">Drama</option>
+                        <option value="10751">Family</option>
+                        <option value="14">Fantasy</option>
+                        <option value="36">History</option>
+                        <option value="27">Horror</option>
+                        <option value="10402">Music</option>
+                        <option value="9648">Mystery</option>
+                        <option value="10749">Romance</option>
+                        <option value="878">Science Fiction</option>
+                        <option value="10770">TV Movie</option>
+                        <option value="53">Thriller</option>
+                        <option value="10752">War</option>
+                        <option value="37">Western</option>
+                    </select>
+                </div>
+                <div className="language-selector">
+                    <label htmlFor="language-select">Preferred Language: </label>
+                    <select id="language-select" value={preferredLanguage} onChange={handlePreferredLanguageChange}>
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="ja">Japanese</option>
+                    </select>
+                </div>
+            </div>
 
-        <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-        <h1 className='text-white'>{searchTerm}</h1>
+            <h2>Recommended Movies</h2>
+            <div className="movie-grid">
+                {recommendedMovies.length > 0 ? (
+                    recommendedMovies.map(movie => (
+                        <MovieCard key={movie.id} movie={movie} onMovieClick={openMovieModal} />
+                    ))
+                ) : (
+                    <p>No recommendations available right now.</p>
+                )}
+            </div>
 
-          <section className='all-movies'>
-            <h2 className='mt-[40px]'>All Movies</h2>
+            <h2>All Movies</h2>
+            <div className="movie-grid">
+                {displayedMovies.length > 0 ? (
+                    displayedMovies.map(movie => (
+                        <MovieCard key={movie.id} movie={movie} onMovieClick={openMovieModal} />
+                    ))
+                ) : (
+                    <p>No movies found.</p>
+                )}
+            </div>
 
-            {isLoading ? (
-              <Spinner/>
-            ) : errorMessage ? (
-              <p className='text-red-500'>{errorMessage}</p>
-            ) : (
-              <ul>
-                {movieList.map((movie) => (
-                  <MovieCard key={movie.id} movie={movie}/>
-                ))}
-              </ul>
+            <h2>Favorite Movies</h2>
+            <div className="movie-grid favorite-movies">
+                {favorites.length > 0 ? (
+                    favorites.map(movie => (
+                        <MovieCard key={movie.id} movie={movie} onMovieClick={openMovieModal} isFavorite={true} onRemoveFavorite={openConfirmModal} />
+                    ))
+                ) : (
+                    <p>You have no favorite movies yet.</p>
+                )}
+            </div>
+
+            {selectedMovie && (
+                <MovieModal movie={selectedMovie} onClose={closeMovieModal} onAddToFavorites={handleAddToFavorites} isFavorite={favorites.some(fav => fav.id === selectedMovie.id)} />
             )}
-          </section>
-        </div>
 
-      </div>
-    </main>
-  )
+            {confirmModalOpen && (
+                <ConfirmModal 
+                    message="Are you sure you want to remove this movie from your favorites?" 
+                    onConfirm={() => handleRemoveFromFavorites(favorites.find(fav => fav.id === selectedMovie.id) || selectedMovie)} 
+                    onCancel={closeConfirmModal} 
+                />
+            )}
+        </div>
+    );
 }
 
-export default App
+export default App;
