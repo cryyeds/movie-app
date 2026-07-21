@@ -41,8 +41,8 @@ The backend is an Express server that talks to the TMDB API. It handles user sig
 - The backend builds a TMDB discover query using the user preferences and returns a page of recommendation results.
 - If a personalized recommendation page has fewer than 10 movies, the backend fills the list with trending movies so the feed stays full.
 - The frontend shows the first recommendation batch and loads more pages as needed.
-- The recommendation panel button stays active to load more movies, and if an API error occurs it shows an error state instead of disabling the button.
-- The search dropdown is rendered with a full scrollable menu so results are visible without being cut off.
+- The recommendation panel button stays active to load more movies. If the next API page cannot be loaded, the button displays an error state.
+- The search dropdown is rendered full height with scrolling enabled so users can see all movie cards without the menu being cut off.
 
 ## Deployment notes
 

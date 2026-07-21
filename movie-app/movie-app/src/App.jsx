@@ -123,6 +123,11 @@ const App = () => {
     const availableTop = rect.top - 24;
     const useBottom = availableBottom < 240 && availableTop > availableBottom;
 
+    const maxAvailableHeight = Math.min(
+      window.innerHeight - 100,
+      useBottom ? availableTop : availableBottom
+    );
+
     setSearchDropdownStyle({
       position: "fixed",
       left: `${rect.left}px`,
@@ -136,11 +141,11 @@ const App = () => {
       ...(useBottom
         ? {
             bottom: `${window.innerHeight - rect.top + 12}px`,
-            maxHeight: `${availableTop}px`,
+            maxHeight: `${Math.max(240, maxAvailableHeight)}px`,
           }
         : {
             top: `${rect.bottom + 12}px`,
-            maxHeight: `${availableBottom}px`,
+            maxHeight: `${Math.max(240, maxAvailableHeight)}px`,
           }),
     });
   };
@@ -818,7 +823,7 @@ const App = () => {
                 }}
               >
                 <div
-                  className="p-3 min-h-[20rem] max-h-[calc(80vh-6rem)] overflow-y-auto"
+                  className="p-3 min-h-[20rem] max-h-full overflow-y-auto"
                   style={{
                     overscrollBehavior: "contain",
                     WebkitOverflowScrolling: "touch",
@@ -914,8 +919,13 @@ const App = () => {
     }
 
     const nextPage = recommendationsPage + 1;
-    console.log("Fetching recommendations page", nextPage);
-    await fetchRecommendations(nextPage, true);
+    if (nextPage <= recommendationsTotalPages) {
+      console.log("Fetching recommendations page", nextPage);
+      await fetchRecommendations(nextPage, true);
+      return;
+    }
+
+    setRecommendationsButtonError("Error");
   };
 
   const HomeSection = () => (
