@@ -391,25 +391,37 @@ app.get("/trending", async (req, res) => {
 });
 
 // Recommendations
-app.get("/recommendations", authMiddleware, async (req, res) => {
+app.get("/recommendations", async (req, res) => {
   try {
-    const user = await User.findById(req.userId);
+    let user = null;
+    const authHeader = req.headers.authorization;
 
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        user = await User.findById(decoded.id);
+      } catch (error) {
+        console.warn("Recommendations accessed with invalid token:", error.message);
+      }
     }
 
     const page = parseInt(req.query.page, 10) || 1;
+    const preferences = user?.preferences || {
+      genres: [],
+      mood: "",
+      watchStyle: "",
+      languages: [],
+    };
+
     const genreIds =
-      user.preferences?.genres
+      preferences.genres
         ?.map((genre) => GENRE_MAP[genre])
         .filter(Boolean)
         .join(",") || "";
 
-    const watchStyle = user.preferences?.watchStyle || "";
-    const mood = user.preferences?.mood || "";
+    const watchStyle = preferences.watchStyle || "";
+    const mood = preferences.mood || "";
 
     let minVote = 5;
 
@@ -431,22 +443,20 @@ app.get("/recommendations", authMiddleware, async (req, res) => {
       queryParts.push(`with_genres=${genreIds}`);
     }
 
-    // Apply language filter on the TMDB discover query if languages are selected
-    const languages = user.preferences?.languages || [];
     const languageMap = {
-      "English": "en",
-      "Spanish": "es",
-      "French": "fr",
-      "German": "de",
-      "Hindi": "hi",
-      "Portuguese": "pt",
-      "Russian": "ru",
-      "Japanese": "ja",
-      "Korean": "ko",
-      "Italian": "it",
+      English: "en",
+      Spanish: "es",
+      French: "fr",
+      German: "de",
+      Hindi: "hi",
+      Portuguese: "pt",
+      Russian: "ru",
+      Japanese: "ja",
+      Korean: "ko",
+      Italian: "it",
     };
 
-    const selectedLanguageCodes = (user.preferences?.languages || [])
+    const selectedLanguageCodes = preferences.languages
       .map((lang) => languageMap[lang])
       .filter(Boolean);
 
@@ -471,8 +481,8 @@ app.get("/recommendations", authMiddleware, async (req, res) => {
     }
 
     const queryString = queryParts.join("&");
-
     console.log("Recommendations query:", queryString);
+
     const response = await fetch(
       `${TMDB_BASE_URL}/discover/movie?${queryString}`,
       tmdbOptions
@@ -499,8 +509,7 @@ app.get("/recommendations", authMiddleware, async (req, res) => {
       );
     }
 
-    if (user.preferences?.mood) {
-      const mood = user.preferences.mood;
+    if (preferences.mood) {
       if (mood === "Exciting") {
         results = results.filter((movie) => movie.vote_average >= 7);
       } else if (mood === "Mind-Bending") {
