@@ -158,12 +158,9 @@ const App = () => {
     window.addEventListener("resize", handleResize);
     window.addEventListener("scroll", handleResize);
 
-    document.body.style.overflow = "hidden";
-
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("scroll", handleResize);
-      document.body.style.overflow = "";
     };
   }, [searchExecuted]);
 
@@ -337,6 +334,7 @@ const App = () => {
       const responsePage = data?.page || page;
       const totalPages = data?.total_pages || page;
       const shuffled = shuffleArray(results);
+      setRecommendationsButtonError("");
 
       if (!append) {
         let allResults = shuffled;
@@ -463,6 +461,54 @@ const App = () => {
         setVisibleRecommended(ITEMS_PER_PAGE);
         setHasMoreRecommendations(false);
       }
+    } finally {
+      setRecommendationsLoading(false);
+    }
+  };
+
+  const fetchTrendingFallback = async () => {
+    if (recommendationsLoading) return;
+    setRecommendationsLoading(true);
+    setRecommendationsButtonError("");
+    setRecommendationsError("");
+
+    try {
+      const response = await fetch(`${API_URL}/trending`);
+      if (!response.ok) {
+        throw new Error("Unable to load more movies.");
+      }
+
+      const data = await response.json();
+      const newMovies = (data || []).filter(
+        (movie) => !recommendedMovies.some((existing) => existing.id === movie.id)
+      );
+
+      if (newMovies.length === 0) {
+        setRecommendationsInfo(
+          "No additional unique trending movies were found."
+        );
+        setHasMoreRecommendations(false);
+        return;
+      }
+
+      const accumulated = appendUniqueMovies(recommendedMovies, newMovies);
+      const nextVisible = Math.min(
+        visibleRecommended + ITEMS_PER_PAGE,
+        accumulated.length
+      );
+
+      setRecommendedMovies(accumulated);
+      setRecommendationsPage(recommendationsPage);
+      setRecommendationsTotalPages(recommendationsTotalPages);
+      setVisibleRecommended(nextVisible);
+      setHasMoreRecommendations(accumulated.length > nextVisible);
+      setRecommendationsInfo(
+        "Showing additional trending movies because no more personalized pages were available."
+      );
+    } catch (error) {
+      console.error("Error loading trending fallback:", error);
+      setRecommendationsButtonError(error.message || "Error");
+      setRecommendationsInfo("");
     } finally {
       setRecommendationsLoading(false);
     }
@@ -806,35 +852,19 @@ const App = () => {
 
             {searchExecuted && (
               <div
-                className="flex flex-col rounded-3xl border border-white/10 bg-dark-100/95 shadow-[0_20px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl"
+                className="search-dropdown flex flex-col rounded-3xl border border-white/10 bg-dark-100/95 shadow-[0_20px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl"
                 style={{
                   ...searchDropdownStyle,
-                  maxHeight: "calc(100vh - 80px)",
                   minHeight: "240px",
                   overflowY: "auto",
                   overflowX: "hidden",
                   overscrollBehavior: "contain",
-                  touchAction: "pan-y",
-                }}
-                onWheel={(event) => event.stopPropagation()}
-                onTouchMove={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
+                  scrollbarGutter: "stable",
+                  scrollbarWidth: "thin",
+                  scrollbarColor: "#AB8BFF rgba(15, 13, 35, 0.25)",
                 }}
               >
-                <div
-                  className="p-3 min-h-[20rem] max-h-full overflow-y-auto"
-                  style={{
-                    overscrollBehavior: "contain",
-                    WebkitOverflowScrolling: "touch",
-                  }}
-                  onWheel={(event) => event.stopPropagation()}
-                  onTouchMove={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                  }}
-                  onScroll={(event) => event.stopPropagation()}
-                >
+                <div className="p-3 min-h-[20rem] max-h-full">
                   {isLoading ? (
                     <p className="text-sm text-light-200">Searching movies...</p>
                   ) : errorMessage ? (
@@ -918,14 +948,14 @@ const App = () => {
       return;
     }
 
-    const nextPage = recommendationsPage + 1;
-    if (nextPage <= recommendationsTotalPages) {
-      console.log("Fetching recommendations page", nextPage);
-      await fetchRecommendations(nextPage, true);
+    if (recommendationsPage >= recommendationsTotalPages) {
+      await fetchTrendingFallback();
       return;
     }
 
-    setRecommendationsButtonError("Error");
+    const nextPage = recommendationsPage + 1;
+    console.log("Fetching recommendations page", nextPage);
+    await fetchRecommendations(nextPage, true);
   };
 
   const HomeSection = () => (

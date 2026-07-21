@@ -179,6 +179,32 @@
   }
 }
 
+.search-dropdown {
+  scrollbar-width: thin;
+  scrollbar-color: #AB8BFF rgba(15, 13, 35, 0.25);
+  scrollbar-gutter: stable;
+}
+
+.search-dropdown::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.search-dropdown::-webkit-scrollbar-track {
+  background: rgba(15, 13, 35, 0.25);
+  border-radius: 9999px;
+}
+
+.search-dropdown::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #AB8BFF 0%, #D6C7FF 100%);
+  border-radius: 9999px;
+  border: 2px solid rgba(15, 13, 35, 0.45);
+}
+
+.search-dropdown::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #9d7de8 0%, #c9b5f0 100%);
+}
+
 .favorite-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #AB8BFF rgba(15, 13, 35, 0.25);
@@ -200,6 +226,31 @@
 }
 
 /* Dark Purple Scrollbar Styling */
+.search-dropdown {
+  scrollbar-width: thin;
+  scrollbar-color: #AB8BFF rgba(15, 13, 35, 0.25);
+}
+
+.search-dropdown::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.search-dropdown::-webkit-scrollbar-track {
+  background: rgba(15, 13, 35, 0.25);
+  border-radius: 9999px;
+}
+
+.search-dropdown::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #AB8BFF 0%, #D6C7FF 100%);
+  border-radius: 9999px;
+  border: 2px solid rgba(15, 13, 35, 0.45);
+}
+
+.search-dropdown::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #9d7de8 0%, #c9b5f0 100%);
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
