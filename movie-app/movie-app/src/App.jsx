@@ -49,6 +49,7 @@ const App = () => {
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [recommendationsError, setRecommendationsError] = useState("");
   const [recommendationsInfo, setRecommendationsInfo] = useState("");
+  const [recommendationsButtonError, setRecommendationsButtonError] = useState("");
   const [recommendationsPage, setRecommendationsPage] = useState(1);
   const [recommendationsTotalPages, setRecommendationsTotalPages] = useState(1);
   const [hasMoreRecommendations, setHasMoreRecommendations] = useState(true);
@@ -118,19 +119,29 @@ const App = () => {
     if (!searchRef.current) return;
 
     const rect = searchRef.current.getBoundingClientRect();
+    const availableBottom = window.innerHeight - rect.bottom - 24;
+    const availableTop = rect.top - 24;
+    const useBottom = availableBottom < 240 && availableTop > availableBottom;
 
     setSearchDropdownStyle({
       position: "fixed",
       left: `${rect.left}px`,
-      top: `${rect.bottom + 12}px`,
       width: `${rect.width}px`,
       maxWidth: "1200px",
       minWidth: "360px",
       zIndex: 60,
       boxSizing: "border-box",
-      maxHeight: "calc(100vh - 140px)",
       overflowX: "hidden",
       overflowY: "auto",
+      ...(useBottom
+        ? {
+            bottom: `${window.innerHeight - rect.top + 12}px`,
+            maxHeight: `${availableTop}px`,
+          }
+        : {
+            top: `${rect.bottom + 12}px`,
+            maxHeight: `${availableBottom}px`,
+          }),
     });
   };
 
@@ -440,6 +451,7 @@ const App = () => {
     } catch (error) {
       console.error("Error fetching recommendations:", error);
       setRecommendationsError(error.message || "Unable to load recommendations.");
+      setRecommendationsButtonError(error.message || "Error");
       setRecommendationsInfo("");
       if (!append) {
         setRecommendedMovies([]);
@@ -792,7 +804,10 @@ const App = () => {
                 className="flex flex-col rounded-3xl border border-white/10 bg-dark-100/95 shadow-[0_20px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl"
                 style={{
                   ...searchDropdownStyle,
-                  overflow: "auto",
+                  maxHeight: "calc(100vh - 80px)",
+                  minHeight: "240px",
+                  overflowY: "auto",
+                  overflowX: "hidden",
                   overscrollBehavior: "contain",
                   touchAction: "pan-y",
                 }}
@@ -889,6 +904,7 @@ const App = () => {
 
   const handleShowMoreRecommendations = async () => {
     if (recommendationsLoading) return;
+    setRecommendationsButtonError("");
 
     if (visibleRecommended < recommendedMovies.length) {
       setVisibleRecommended((prev) =>
@@ -898,8 +914,6 @@ const App = () => {
     }
 
     const nextPage = recommendationsPage + 1;
-    if (nextPage > recommendationsTotalPages) return;
-
     console.log("Fetching recommendations page", nextPage);
     await fetchRecommendations(nextPage, true);
   };
@@ -957,6 +971,7 @@ const App = () => {
         recommendationsLoading={recommendationsLoading}
         recommendationsError={recommendationsError}
         recommendationsInfo={recommendationsInfo}
+        recommendationsButtonError={recommendationsButtonError}
         hasMoreRecommendations={hasMoreRecommendations}
         handleShowMoreRecommendations={handleShowMoreRecommendations}
         favorites={favorites}

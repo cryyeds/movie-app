@@ -7,6 +7,7 @@ const Recommendations = ({
   recommendationsLoading,
   recommendationsError,
   recommendationsInfo,
+  recommendationsButtonError,
   hasMoreRecommendations,
   handleShowMoreRecommendations,
   favorites,
@@ -54,18 +55,20 @@ const Recommendations = ({
               <button
                 type="button"
                 onClick={handleShowMoreRecommendations}
-                disabled={recommendationsLoading || (!hasMoreRecommendations && visibleRecommended >= recommendedMovies.length)}
+                disabled={recommendationsLoading}
                 className={`rounded-xl px-8 py-3 font-semibold text-white transition ${
-                  recommendationsLoading || (!hasMoreRecommendations && visibleRecommended >= recommendedMovies.length)
+                  recommendationsLoading
                     ? "cursor-not-allowed bg-purple-400/30"
+                    : recommendationsButtonError
+                    ? "bg-red-500/90"
                     : "bg-gradient-to-r from-[#AB8BFF] to-[#D6C7FF] hover:opacity-90 hover:shadow-lg hover:shadow-purple-500/30"
                 }`}
               >
                 {recommendationsLoading
                   ? "Loading more..."
-                  : hasMoreRecommendations || visibleRecommended < recommendedMovies.length
-                  ? "Show More Movies"
-                  : "No more movies"}
+                  : recommendationsButtonError
+                  ? "Error"
+                  : "Show More Movies"}
               </button>
             </div>
           </div>
