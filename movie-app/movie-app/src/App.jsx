@@ -7,11 +7,19 @@ import Survey from "./components/Survey";
 import ConfirmModal from "./components/ConfirmModal";
 import MovieModal from "./components/MovieModal";
 
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+const API_URL = import.meta.env.VITE_API_BASE_URL || window.location.origin;
 
 const App = () => {
-  const [token, setToken] =
-    useState(localStorage.getItem("token") || null);
+  const [token, setToken] = useState(localStorage.getItem("token") || null);
+
+  const getAuthHeaders = () => {
+    const storedToken = localStorage.getItem("token");
+    return storedToken
+      ? { Authorization: `Bearer ${storedToken}` }
+      : {};
+  };
+
+  const isAuthenticated = () => Boolean(getAuthHeaders().Authorization);
 
   const [user, setUser] = useState(null);
 
@@ -39,6 +47,7 @@ const App = () => {
   const [recommendationsError, setRecommendationsError] = useState("");
   const [recommendationsInfo, setRecommendationsInfo] = useState("");
   const [recommendationsPage, setRecommendationsPage] = useState(1);
+  const [recommendationsTotalPages, setRecommendationsTotalPages] = useState(1);
   const [hasMoreRecommendations, setHasMoreRecommendations] = useState(true);
   const recommendationsRef = useRef(null);
   const recommendationsSectionRef = useRef(null);
@@ -117,7 +126,8 @@ const App = () => {
       zIndex: 60,
       boxSizing: "border-box",
       maxHeight: "calc(100vh - 140px)",
-      overflow: "hidden",
+      overflowX: "hidden",
+      overflowY: "auto",
     });
   };
 
@@ -129,9 +139,12 @@ const App = () => {
     window.addEventListener("resize", handleResize);
     window.addEventListener("scroll", handleResize);
 
+    document.body.style.overflow = "hidden";
+
     return () => {
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("scroll", handleResize);
+      document.body.style.overflow = "";
     };
   }, [searchExecuted]);
 
@@ -205,10 +218,12 @@ const App = () => {
     if (!token) return;
 
     try {
+      if (!isAuthenticated()) {
+        throw new Error("Session token missing. Please sign in again.");
+      }
+
       const response = await fetch(`${API_URL}/user/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -268,20 +283,29 @@ const App = () => {
     return shuffled;
   };
 
+  const appendUniqueMovies = (existing, incoming) => {
+    const ids = new Set(existing.map((movie) => movie.id));
+    return [...existing, ...incoming.filter((movie) => !ids.has(movie.id))];
+  };
+
   const fetchRecommendations = async (page = 1, append = false) => {
     if (!token) return;
+    if (recommendationsLoading) return;
 
+    setRecommendationsLoading(true);
     if (!append) {
-      setRecommendationsLoading(true);
       setRecommendationsError("");
       setRecommendationsInfo("");
     }
 
     try {
+      if (!isAuthenticated()) {
+        setRecommendationsError("Session token missing. Please sign in again.");
+        return;
+      }
+
       const response = await fetch(`${API_URL}/recommendations?page=${page}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -295,55 +319,120 @@ const App = () => {
       const totalPages = data?.total_pages || page;
       const shuffled = shuffleArray(results);
 
-      if (shuffled.length === 0) {
-        if (page === 1) {
+      if (!append) {
+        let allResults = shuffled;
+        let currentPage = responsePage;
+        let currentTotalPages = totalPages;
+
+        while (
+          allResults.length < ITEMS_PER_PAGE &&
+          currentPage < currentTotalPages
+        ) {
+          const nextPage = currentPage + 1;
+          const nextResponse = await fetch(
+            `${API_URL}/recommendations?page=${nextPage}`,
+            {
+              headers: getAuthHeaders(),
+            }
+          );
+
+          if (!nextResponse.ok) {
+            break;
+          }
+
+          const nextData = await nextResponse.json();
+          const nextResults = shuffleArray(nextData?.results || []);
+          currentTotalPages = nextData?.total_pages || currentTotalPages;
+          currentPage = nextPage;
+
+          allResults = appendUniqueMovies(allResults, nextResults);
+          if (nextResults.length === 0 && currentPage >= currentTotalPages) {
+            break;
+          }
+        }
+
+        if (allResults.length === 0) {
           const fallbackResponse = await fetch(`${API_URL}/trending`);
           if (fallbackResponse.ok) {
             const fallbackData = await fallbackResponse.json();
-            setRecommendedMovies(shuffleArray(fallbackData || []));
+            const fallbackList = shuffleArray(fallbackData || []);
+            setRecommendedMovies(fallbackList);
             setRecommendationsInfo(
               "No personalized recommendations found. Showing trending movies instead."
             );
             setRecommendationsError("");
-            setVisibleRecommended(Math.min(ITEMS_PER_PAGE, fallbackData?.length || 0));
+            setRecommendationsPage(1);
+            setRecommendationsTotalPages(1);
+            setVisibleRecommended(Math.min(ITEMS_PER_PAGE, fallbackList.length));
             setHasMoreRecommendations(false);
           } else {
             setRecommendedMovies([]);
             setRecommendationsError(
-              "No recommendations yet. Try updating your preferences."
+              "Could not load recommendations. Please try again."
             );
             setVisibleRecommended(0);
             setHasMoreRecommendations(false);
           }
         } else {
-          setRecommendationsError("No more recommendations available.");
-          setHasMoreRecommendations(false);
+          setRecommendedMovies(allResults);
+          setRecommendationsPage(currentPage);
+          setRecommendationsTotalPages(currentTotalPages);
+          setVisibleRecommended(Math.min(ITEMS_PER_PAGE, allResults.length));
+          setHasMoreRecommendations(
+            currentPage < currentTotalPages || allResults.length > ITEMS_PER_PAGE
+          );
         }
       } else {
-        if (append) {
-          setRecommendedMovies((prev) => {
-            const ids = new Set(prev.map((movie) => movie.id));
-            const deduped = shuffled.filter((movie) => !ids.has(movie.id));
-            const nextMovies = [...prev, ...deduped];
+        let accumulated = [...recommendedMovies];
+        let currentPage = responsePage;
+        let currentTotalPages = totalPages;
 
-            setRecommendationsPage(responsePage);
-            setVisibleRecommended((prevVisible) =>
-              Math.min(prevVisible + ITEMS_PER_PAGE, nextMovies.length)
-            );
-            setHasMoreRecommendations(responsePage < totalPages);
-
-            return nextMovies;
-          });
-        } else {
-          setRecommendedMovies(shuffled);
-          setRecommendationsPage(responsePage);
-          setVisibleRecommended(Math.min(ITEMS_PER_PAGE, shuffled.length));
-          setHasMoreRecommendations(responsePage < totalPages);
-
-          if (shuffled.length < ITEMS_PER_PAGE && responsePage < totalPages) {
-            await fetchRecommendations(responsePage + 1, true);
+        const addUniqueMovies = (movies) => {
+          const ids = new Set(accumulated.map((movie) => movie.id));
+          const deduped = movies.filter((movie) => !ids.has(movie.id));
+          if (deduped.length > 0) {
+            accumulated = [...accumulated, ...deduped];
           }
+          return deduped.length;
+        };
+
+        addUniqueMovies(shuffled);
+
+        while (
+          accumulated.length < visibleRecommended + ITEMS_PER_PAGE &&
+          currentPage < currentTotalPages
+        ) {
+          const nextPage = currentPage + 1;
+          const nextResponse = await fetch(
+            `${API_URL}/recommendations?page=${nextPage}`,
+            {
+              headers: getAuthHeaders(),
+            }
+          );
+
+          if (!nextResponse.ok) {
+            break;
+          }
+
+          const nextData = await nextResponse.json();
+          const nextResults = shuffleArray(nextData?.results || []);
+          currentTotalPages = nextData?.total_pages || currentTotalPages;
+          currentPage = nextPage;
+          addUniqueMovies(nextResults);
         }
+
+        const nextVisible = Math.min(
+          visibleRecommended + ITEMS_PER_PAGE,
+          accumulated.length
+        );
+
+        setRecommendedMovies(accumulated);
+        setRecommendationsPage(currentPage);
+        setRecommendationsTotalPages(currentTotalPages);
+        setVisibleRecommended(nextVisible);
+        setHasMoreRecommendations(
+          currentPage < currentTotalPages || accumulated.length > nextVisible
+        );
       }
     } catch (error) {
       console.error("Error fetching recommendations:", error);
@@ -352,11 +441,10 @@ const App = () => {
       if (!append) {
         setRecommendedMovies([]);
         setVisibleRecommended(ITEMS_PER_PAGE);
+        setHasMoreRecommendations(false);
       }
     } finally {
-      if (!append) {
-        setRecommendationsLoading(false);
-      }
+      setRecommendationsLoading(false);
     }
   };
 
@@ -364,14 +452,11 @@ const App = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(
-        `${API_URL}/user/favorites/details`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      if (!isAuthenticated()) return;
+
+      const response = await fetch(`${API_URL}/user/favorites/details`, {
+        headers: getAuthHeaders(),
+      });
 
       if (!response.ok) {
         throw new Error("Unable to load favorite movies.");
@@ -447,11 +532,13 @@ const App = () => {
     if (!token) return;
 
     try {
+      if (!isAuthenticated()) throw new Error("Session token missing. Please sign in again.");
+
       const response = await fetch(`${API_URL}/user/favorites`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           favoriteMovies: newFavorites,
@@ -488,11 +575,13 @@ const App = () => {
     if (!token) return;
 
     try {
+      if (!isAuthenticated()) throw new Error("Session token missing. Please sign in again.");
+
       const response = await fetch(`${API_URL}/user/preferences`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           preferences: settingsPreferences,
@@ -700,20 +789,27 @@ const App = () => {
                 className="flex flex-col rounded-3xl border border-white/10 bg-dark-100/95 shadow-[0_20px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl"
                 style={{
                   ...searchDropdownStyle,
+                  overflow: "auto",
                   overscrollBehavior: "contain",
                   touchAction: "pan-y",
                 }}
                 onWheel={(event) => event.stopPropagation()}
-                onTouchMove={(event) => event.stopPropagation()}
+                onTouchMove={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
               >
                 <div
-                  className="p-3 min-h-[26rem] max-h-[calc(100vh-4rem)] overflow-y-auto"
+                  className="p-3 min-h-[20rem] max-h-[calc(80vh-6rem)] overflow-y-auto"
                   style={{
                     overscrollBehavior: "contain",
                     WebkitOverflowScrolling: "touch",
                   }}
                   onWheel={(event) => event.stopPropagation()}
-                  onTouchMove={(event) => event.stopPropagation()}
+                  onTouchMove={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
                   onScroll={(event) => event.stopPropagation()}
                 >
                   {isLoading ? (
@@ -788,18 +884,10 @@ const App = () => {
     </nav>
   );
 
-  const handleShowMoreRecommendations = async (event) => {
-    event.preventDefault();
-    event.stopPropagation();
+  const handleShowMoreRecommendations = async () => {
+    if (recommendationsLoading) return;
 
-    const canShowMoreLoaded = visibleRecommended < recommendedMovies.length;
-    const canLoadNextPage = hasMoreRecommendations;
-
-    if (recommendationsLoading || (!canShowMoreLoaded && !canLoadNextPage)) {
-      return;
-    }
-
-    if (canShowMoreLoaded) {
+    if (visibleRecommended < recommendedMovies.length) {
       setVisibleRecommended((prev) =>
         Math.min(prev + ITEMS_PER_PAGE, recommendedMovies.length)
       );
@@ -807,6 +895,9 @@ const App = () => {
     }
 
     const nextPage = recommendationsPage + 1;
+    if (nextPage > recommendationsTotalPages) return;
+
+    console.log("Fetching recommendations page", nextPage);
     await fetchRecommendations(nextPage, true);
   };
 
@@ -884,27 +975,25 @@ const App = () => {
                   ))}
                 </ul>
               </div>
+              <div className="mt-3 text-sm text-light-200">
+                Showing {Math.min(visibleRecommended, recommendedMovies.length)} of {recommendedMovies.length} recommendations
+                {recommendationsTotalPages > 0 ? ` — page ${recommendationsPage} of ${recommendationsTotalPages}` : ""}
+              </div>
               <div className="sticky bottom-0 z-10 bg-[#0f0d23] pt-4">
                 <button
                   type="button"
                   onClick={handleShowMoreRecommendations}
-                  disabled={
-                    recommendationsLoading ||
-                    (visibleRecommended >= recommendedMovies.length && !hasMoreRecommendations)
-                  }
+                  disabled={recommendationsLoading || (!hasMoreRecommendations && visibleRecommended >= recommendedMovies.length)}
                   className={`rounded-xl px-8 py-3 font-semibold text-white transition ${
-                    recommendationsLoading ||
-                    (visibleRecommended >= recommendedMovies.length && !hasMoreRecommendations)
+                    recommendationsLoading || (!hasMoreRecommendations && visibleRecommended >= recommendedMovies.length)
                       ? "cursor-not-allowed bg-purple-400/30"
                       : "bg-gradient-to-r from-[#AB8BFF] to-[#D6C7FF] hover:opacity-90 hover:shadow-lg hover:shadow-purple-500/30"
                   }`}
                 >
                   {recommendationsLoading
                     ? "Loading more..."
-                    : visibleRecommended < recommendedMovies.length
+                    : hasMoreRecommendations || visibleRecommended < recommendedMovies.length
                     ? "Show More Movies"
-                    : hasMoreRecommendations
-                    ? "Load more recommendations"
                     : "No more movies"}
                 </button>
               </div>
@@ -1153,14 +1242,12 @@ const App = () => {
 
     // Call the API to delete the current user account
     const deleteAccount = async () => {
-      if (!token) return;
+      if (!isAuthenticated()) return;
 
       try {
         const response = await fetch(`${API_URL}/user`, {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: getAuthHeaders(),
         });
 
         if (!response.ok) {

@@ -8,6 +8,8 @@ const Survey = ({ onSubmit, onLoginClick }) => {
   const [watchStyle, setWatchStyle] =
     useState("");
 
+  const [languages, setLanguages] = useState([]);
+
   const genreOptions = [
     "Action",
     "Adventure",
@@ -37,6 +39,17 @@ const Survey = ({ onSubmit, onLoginClick }) => {
     "Family Night",
   ];
 
+  const languageOptions = [
+    "English",
+    "Spanish",
+    "French",
+    "German",
+    "Hindi",
+    "Japanese",
+    "Korean",
+    "Italian",
+  ];
+
   const handleGenreChange = (genre) => {
     if (genres.includes(genre)) {
       setGenres(genres.filter((g) => g !== genre));
@@ -51,10 +64,24 @@ const Survey = ({ onSubmit, onLoginClick }) => {
     setGenres([...genres, genre]);
   };
 
+  const handleLanguageChange = (language) => {
+    if (languages.includes(language)) {
+      setLanguages(languages.filter((l) => l !== language));
+      return;
+    }
+
+    if (languages.length >= 2) {
+      alert("You can choose up to 2 preferred languages.");
+      return;
+    }
+
+    setLanguages([...languages, language]);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (genres.length === 0 || !mood || !watchStyle) {
+    if (genres.length === 0 || !mood || !watchStyle || languages.length === 0) {
       alert("Please complete all questions.");
       return;
     }
@@ -63,6 +90,7 @@ const Survey = ({ onSubmit, onLoginClick }) => {
       genres,
       mood,
       watchStyle,
+      languages,
     });
   };
 
@@ -166,6 +194,35 @@ const Survey = ({ onSubmit, onLoginClick }) => {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <h2 className="mb-4">Preferred languages</h2>
+
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                  {languageOptions.map((language) => {
+                    const selected = languages.includes(language);
+
+                    return (
+                      <button
+                        type="button"
+                        key={language}
+                        onClick={() => handleLanguageChange(language)}
+                        className={`rounded-xl border p-3 text-sm font-medium transition ${
+                          selected
+                            ? "border-purple-400 bg-purple-500 text-white"
+                            : "border-light-100/10 bg-light-100/5 text-light-200 hover:bg-light-100/10"
+                        }`}
+                      >
+                        {language}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <p className="mt-3 text-light-200">
+                  {languages.length}/2 selected
+                </p>
               </div>
 
               <button

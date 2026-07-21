@@ -8,7 +8,16 @@ const jwt = require("jsonwebtoken");
 
 const app = express();
 
-app.use(cors());
+const corsOptions = {
+  origin: true,
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  exposedHeaders: ["Authorization"],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json());
 
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
