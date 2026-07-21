@@ -7,7 +7,11 @@ import Survey from "./components/Survey";
 import ConfirmModal from "./components/ConfirmModal";
 import MovieModal from "./components/MovieModal";
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+const API_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.MODE === "production"
+    ? "https://back-end-kg97.onrender.com"
+    : "http://localhost:5000");
 
 const App = () => {
   const [token, setToken] = useState(localStorage.getItem("token") || null);

@@ -27,7 +27,11 @@ const Login = ({
     setter(event.target.value);
   };
 
-  const API_URL = import.meta.env.VITE_API_BASE_URL;
+  const API_URL =
+    import.meta.env.VITE_API_BASE_URL ||
+    (import.meta.env.MODE === "production"
+      ? "https://back-end-kg97.onrender.com"
+      : "http://localhost:5000");
 
   useEffect(() => {
     setIsSignup(initialMode === "signup");

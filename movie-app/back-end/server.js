@@ -20,6 +20,10 @@ app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
 app.use(express.json());
 
+app.get("/", (req, res) => {
+  res.send("Movie App backend is running. Use the frontend deployment URL to open the app.");
+});
+
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 
 const GENRE_MAP = {

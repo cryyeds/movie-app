@@ -1,16 +1,45 @@
-# React + Vite
+# Movie App
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+This project is a movie recommendation web app built with a React frontend and an Express backend.
 
-Currently, two official plugins are available:
+## What it does
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The frontend is a React app created with Vite. It shows trending movies, allows users to search for films, and displays personalized recommendations based on a short survey and saved preferences.
 
-## React Compiler
+The backend is an Express server that talks to the TMDB API. It handles user signup, login, saved preferences, favorites, and recommendation requests.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## How the parts work together
 
-## Expanding the Oxlint configuration
+- The browser loads the React app from `movie-app/`.
+- The app sends requests to the backend for authentication, user data, recommended movies, trending movies, and search results.
+- The backend reads user preferences and builds a TMDB query to return recommendation pages.
+- The frontend stores the login token locally and includes it in requests that need authentication.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## Key folders
+
+- `movie-app/`: frontend app source code.
+  - `src/App.jsx`: main app logic, navigation, recommendations, search, and layout.
+  - `src/components/`: reusable UI pieces like `Login`, `Search`, `Survey`, `MovieCard`, and modals.
+- `back-end/`: Express server.
+  - `server.js`: backend routes, authentication, database connection, and TMDB API requests.
+
+## Local development
+
+1. Start the backend in `back-end/`.
+2. Start the frontend in `movie-app/`.
+3. Open the React app in the browser to sign in or sign up.
+
+## Recommendation flow
+
+- User sets preferences through the survey.
+- If signed in, the app sends preferences to the backend.
+- The backend uses these preferences to query TMDB and return recommendation results in pages.
+- The frontend shows the first page of recommendations and loads more on demand.
+
+## Deployment notes
+
+- The frontend and backend are separate deployments.
+- The frontend needs the backend URL in production so API calls go to the right server.
+- The backend must allow requests from the frontend and accept the Authorization header for protected routes.
+
+This README explains the full project in plain terms and how the frontend and backend communicate to deliver movie recommendations.
