@@ -433,14 +433,13 @@ app.get("/recommendations", async (req, res) => {
       minVote = 6;
     }
 
-    const queryParts = [
-      "sort_by=popularity.desc",
-      `vote_average.gte=${minVote}`,
-      `page=${page}`,
-    ];
+    const params = new URLSearchParams();
+    params.set("sort_by", "popularity.desc");
+    params.set("vote_average.gte", minVote.toString());
+    params.set("page", page.toString());
 
     if (genreIds) {
-      queryParts.push(`with_genres=${genreIds}`);
+      params.set("with_genres", genreIds);
     }
 
     const languageMap = {
@@ -461,26 +460,23 @@ app.get("/recommendations", async (req, res) => {
       .filter(Boolean);
 
     if (selectedLanguageCodes.length === 1) {
-      queryParts.push(`with_original_language=${selectedLanguageCodes[0]}`);
+      params.set("with_original_language", selectedLanguageCodes[0]);
     }
 
     if (watchStyle === "Family Night") {
-      queryParts.push("certification_country=US", "certification.lte=PG-13");
+      params.set("certification_country", "US");
+      params.set("certification.lte", "PG-13");
     }
 
     if (watchStyle === "Quick Watch") {
-      queryParts.push("with_runtime.lte=100");
+      params.set("with_runtime.lte", "100");
     }
 
     if (watchStyle === "Movie Marathon") {
-      queryParts.push("with_runtime.gte=100");
+      params.set("with_runtime.gte", "100");
     }
 
-    if (watchStyle === "Weekend Movie") {
-      queryParts.push("sort_by=popularity.desc");
-    }
-
-    const queryString = queryParts.join("&");
+    const queryString = params.toString();
     console.log("Recommendations query:", queryString);
 
     const response = await fetch(
