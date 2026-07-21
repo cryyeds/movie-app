@@ -9,15 +9,13 @@ import MovieModal from "./components/MovieModal";
 
 const API_URL =
   import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.MODE === "production"
-    ? "https://back-end-kg97.onrender.com"
-    : "http://localhost:5000");
+  "https://back-end-kg97.onrender.com";
 
 const App = () => {
   const [token, setToken] = useState(localStorage.getItem("token") || null);
 
   const getAuthHeaders = () => {
-    const storedToken = localStorage.getItem("token");
+    const storedToken = token || localStorage.getItem("token");
     return storedToken
       ? { Authorization: `Bearer ${storedToken}` }
       : {};
