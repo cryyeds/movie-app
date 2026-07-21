@@ -12,7 +12,7 @@ The backend is an Express server that talks to the TMDB API. It handles user sig
 
 - The browser loads the React app from `movie-app/`.
 - The app sends requests to the backend for authentication, user data, recommended movies, trending movies, and search results.
-- The backend reads user preferences and builds a TMDB query to return recommendation pages.
+- The backend reads user preferences and builds a TMDB query to return recommendation results in pages.
 - The frontend stores the login token locally and includes it in requests that need authentication.
 
 ## Key folders
@@ -25,21 +25,27 @@ The backend is an Express server that talks to the TMDB API. It handles user sig
 
 ## Local development
 
-1. Start the backend in `back-end/`.
-2. Start the frontend in `movie-app/`.
-3. Open the React app in the browser to sign in or sign up.
+1. Install dependencies.
+   - `cd back-end && npm install`
+   - `cd movie-app && npm install`
+2. Start the backend from `back-end/`.
+   - `node server.js`
+3. Start the frontend from `movie-app/`.
+   - `npm run dev`
+4. Open the React app in the browser, sign in or sign up, and review recommendations.
 
 ## Recommendation flow
 
 - User sets preferences through the survey.
 - If signed in, the app sends preferences to the backend.
-- The backend uses these preferences to query TMDB and return recommendation results in pages.
-- The frontend shows the first page of recommendations and loads more on demand.
+- The backend builds a TMDB discover query using the user preferences and returns a page of recommendation results.
+- If a personalized recommendation page has fewer than 10 movies, the backend fills the list with trending movies so the feed stays full.
+- The frontend shows the first recommendation batch and loads more pages as needed.
 
 ## Deployment notes
 
 - The frontend and backend are separate deployments.
-- The frontend needs the backend URL in production so API calls go to the right server.
-- The backend must allow requests from the frontend and accept the Authorization header for protected routes.
+- The frontend uses `VITE_API_BASE_URL` in production to point API calls to the deployed backend.
+- The backend must allow CORS from the frontend and accept the Authorization header for authenticated requests.
 
-This README explains the full project in plain terms and how the frontend and backend communicate to deliver movie recommendations.
+This README explains the project structure, how to run the app locally, and how recommendation delivery works.

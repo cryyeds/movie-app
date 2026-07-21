@@ -83,6 +83,8 @@ const tmdbOptions = {
   },
 };
 
+const RECOMMENDATIONS_PAGE_SIZE = 10;
+
 const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
@@ -425,8 +427,12 @@ app.get("/recommendations", async (req, res) => {
 
     let minVote = 5;
 
-    if (mood === "Exciting" || mood === "Mind-Bending") {
+    if (mood === "Exciting") {
       minVote = 7;
+    }
+
+    if (mood === "Mind-Bending") {
+      minVote = 6.5;
     }
 
     if (mood === "Emotional") {
@@ -512,6 +518,21 @@ app.get("/recommendations", async (req, res) => {
         results = results.filter((movie) => movie.vote_average >= 6.5);
       } else if (mood === "Emotional") {
         results = results.filter((movie) => movie.vote_average >= 6);
+      }
+    }
+
+    if (results.length < RECOMMENDATIONS_PAGE_SIZE && page === 1) {
+      const fallbackResponse = await fetch(
+        `${TMDB_BASE_URL}/trending/movie/week`,
+        tmdbOptions
+      );
+
+      if (fallbackResponse.ok) {
+        const fallbackData = await fallbackResponse.json();
+        const fallbackMovies = (fallbackData.results || []).filter(
+          (movie) => !results.some((existing) => existing.id === movie.id)
+        );
+        results = [...results, ...fallbackMovies].slice(0, RECOMMENDATIONS_PAGE_SIZE);
       }
     }
 
